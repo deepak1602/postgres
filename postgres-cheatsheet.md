@@ -229,6 +229,7 @@ $ source $HOME/.editrc
 - Show IP of the DB Instance: `SELECT inet_server_addr();`
 - File to save PostgreSQL credentials and permissions (format: `hostname:port:database:username:password`): `chmod 600 ~/.pgpass`
 - Collect statistics of a database (useful to improve speed after a Database Upgrade as previous query plans are deleted): `ANALYZE VERBOSE;`
+- To obtain the `CREATE TABLE` query of a table, any visual GUI like [pgAdmin](https://www.pgadmin.org/) allows to easily, but else you can use `pg_dump`, e.g.: `pg_dump -t '<schema>.<table>' --schema-only <database>` ([source](https://stackoverflow.com/questions/2593803/how-to-generate-the-create-table-sql-statement-for-an-existing-table-in-postgr))
 
 ## Resources & Documentation
 - [Postgres Weekly](https://postgresweekly.com/) newsletter: The best way IMHO to keep up to date with PG news
