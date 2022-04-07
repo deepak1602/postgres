@@ -213,7 +213,82 @@ SELECT pg_terminate_backend(pg_stat_activity.pid)
 FROM pg_stat_activity
 WHERE datname = current_database() AND pid <> pg_backend_pid();
 ```
+- show running queries (pre 9.2)
+```sql
+SELECT procpid, age(clock_timestamp(), query_start), usename, current_query 
+FROM pg_stat_activity 
+WHERE current_query != '<IDLE>' AND current_query NOT ILIKE '%pg_stat_activity%' 
+ORDER BY query_start desc;
+```
 
+- show running queries (9.2)
+```sql
+SELECT pid, age(clock_timestamp(), query_start), usename, query 
+FROM pg_stat_activity 
+WHERE query != '<IDLE>' AND query NOT ILIKE '%pg_stat_activity%' 
+ORDER BY query_start desc;
+```
+
+- kill running query
+```sql
+SELECT pg_cancel_backend(procpid);
+```
+
+- kill idle query
+```sql
+SELECT pg_terminate_backend(procpid);
+```
+
+- vacuum command
+```sql
+VACUUM (VERBOSE, ANALYZE);
+```
+
+- all database users
+```sql
+select * from pg_stat_activity where current_query not like '<%';
+```
+
+- all databases and their sizes
+```sql
+select * from pg_user;
+```
+
+- all tables and their size, with/without indexes
+```sql
+select datname, pg_size_pretty(pg_database_size(datname))
+from pg_database
+order by pg_database_size(datname) desc;
+```
+
+- cache hit rates (should not be less than 0.99)
+```sql
+SELECT sum(heap_blks_read) as heap_read, sum(heap_blks_hit)  as heap_hit, (sum(heap_blks_hit) - sum(heap_blks_read)) / sum(heap_blks_hit) as ratio
+FROM pg_statio_user_tables;
+```
+
+- table index usage rates (should not be less than 0.99)
+```sql
+SELECT relname, 100 * idx_scan / (seq_scan + idx_scan) percent_of_times_index_used, n_live_tup rows_in_table
+FROM pg_stat_user_tables 
+ORDER BY n_live_tup DESC;
+```
+
+- how many indexes are in cache
+```sql
+SELECT sum(idx_blks_read) as idx_read, sum(idx_blks_hit)  as idx_hit, (sum(idx_blks_hit) - sum(idx_blks_read)) / sum(idx_blks_hit) as ratio
+FROM pg_statio_user_indexes;
+```
+
+- Dump database on remote host to file
+```sql
+$ pg_dump -U username -h hostname databasename > dump.sql
+```
+
+- Import dump into existing database
+```sql
+$ psql -d newdb -f dump.sql
+```
 
 ## Keyboard shortcuts
 - `CTRL` + `R`: reverse-i-search
@@ -231,56 +306,7 @@ $ source $HOME/.editrc
 - Collect statistics of a database (useful to improve speed after a Database Upgrade as previous query plans are deleted): `ANALYZE VERBOSE;`
 - To obtain the `CREATE TABLE` query of a table, any visual GUI like [pgAdmin](https://www.pgadmin.org/) allows to easily, but else you can use `pg_dump`, e.g.: `pg_dump -t '<schema>.<table>' --schema-only <database>` ([source](https://stackoverflow.com/questions/2593803/how-to-generate-the-create-table-sql-statement-for-an-existing-table-in-postgr))
 
--- show running queries (pre 9.2)
-SELECT procpid, age(clock_timestamp(), query_start), usename, current_query 
-FROM pg_stat_activity 
-WHERE current_query != '<IDLE>' AND current_query NOT ILIKE '%pg_stat_activity%' 
-ORDER BY query_start desc;
 
--- show running queries (9.2)
-SELECT pid, age(clock_timestamp(), query_start), usename, query 
-FROM pg_stat_activity 
-WHERE query != '<IDLE>' AND query NOT ILIKE '%pg_stat_activity%' 
-ORDER BY query_start desc;
-
--- kill running query
-SELECT pg_cancel_backend(procpid);
-
--- kill idle query
-SELECT pg_terminate_backend(procpid);
-
--- vacuum command
-VACUUM (VERBOSE, ANALYZE);
-
--- all database users
-select * from pg_stat_activity where current_query not like '<%';
-
--- all databases and their sizes
-select * from pg_user;
-
--- all tables and their size, with/without indexes
-select datname, pg_size_pretty(pg_database_size(datname))
-from pg_database
-order by pg_database_size(datname) desc;
-
--- cache hit rates (should not be less than 0.99)
-SELECT sum(heap_blks_read) as heap_read, sum(heap_blks_hit)  as heap_hit, (sum(heap_blks_hit) - sum(heap_blks_read)) / sum(heap_blks_hit) as ratio
-FROM pg_statio_user_tables;
-
--- table index usage rates (should not be less than 0.99)
-SELECT relname, 100 * idx_scan / (seq_scan + idx_scan) percent_of_times_index_used, n_live_tup rows_in_table
-FROM pg_stat_user_tables 
-ORDER BY n_live_tup DESC;
-
--- how many indexes are in cache
-SELECT sum(idx_blks_read) as idx_read, sum(idx_blks_hit)  as idx_hit, (sum(idx_blks_hit) - sum(idx_blks_read)) / sum(idx_blks_hit) as ratio
-FROM pg_statio_user_indexes;
-
--- Dump database on remote host to file
-$ pg_dump -U username -h hostname databasename > dump.sql
-
--- Import dump into existing database
-$ psql -d newdb -f dump.sql
 
 ## Resources & Documentation
 - [Postgres Weekly](https://postgresweekly.com/) newsletter: The best way IMHO to keep up to date with PG news
